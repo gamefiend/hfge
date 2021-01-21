@@ -1,9 +1,5 @@
 package hex
 
-import (
-	"math/rand"
-)
-
 var neighbors = map[int][]int{
 	1: []int{2,5,3,0,0,0},
 	2: []int{4,7,5,1,0,0},
@@ -30,22 +26,29 @@ var neighbors = map[int][]int{
 type Flower struct {
 	currentNode int
 	content map[int]string
+	navHex map[int]int
 }
 
-func NewFlower(content map[int]string) *Flower{
+
+func NewFlower(content map[int]string, nh map[int]int, start int) *Flower{
 	return &Flower{
-		currentNode: 10,
+		currentNode: start,
 		content: content,
+		navHex: nh,
 	}
 }
 
-func (f *Flower) GoToNext() {
-
-	choices := neighbors[f.currentNode]
-
-	f.currentNode = choices[rand.Intn(len(choices))]
+// GoToNextDirection goes in a hex in a direction from 1(NW) to 6(SW).
+// 0 = stand still
+func (f *Flower) GoToNextDirection(direction int) {
+	if direction != 0 {
+		choices := neighbors[f.currentNode]
+		f.currentNode = choices[direction-1]
+	}
 }
 
 func (f *Flower) State () string {
 	return f.content[f.currentNode]
 }
+
+
