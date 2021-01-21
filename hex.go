@@ -34,7 +34,7 @@ type Flower struct {
 
 func NewFlower(content map[int]string) *Flower{
 	return &Flower{
-		currentNode: 9,
+		currentNode: 10,
 		content: content,
 	}
 }
