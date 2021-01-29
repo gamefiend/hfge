@@ -43,12 +43,12 @@ func NewFlower(content map[int]string, nh map[int]int, start int) *Flower{
 	}
 }
 
-// Move goes in a hex in a direction from 1(NW) to 6(SW).
+// Move goes in a hex in a direction from 0(NW) to 5(SW).
 // 0 = stand still
 func (f *Flower) Move(direction int) {
-	if direction != 0 {
+	if direction != -1 {
 		choices := f.Neighbors()
-		validDirection := direction%(len(choices)-1)
+		validDirection := direction%(len(choices))
 		f.currentNode = choices[validDirection]
 	}
 }

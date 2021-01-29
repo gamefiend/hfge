@@ -33,17 +33,17 @@ var content = map[int]string{
 func newTestFlower() *hex.Flower {
 	return hex.NewFlower(content,
 		map[int]int{
-			2: 3,
-			3: 3,
-			4: 4,
-			5: 4,
-			6: 5,
-			7: 5,
-			8: 6,
-			9: 6,
-			10: 1,
-			11: 1,
-			12: 2,
+			2: 2,
+			3: 2,
+			4: 3,
+			5: 3,
+			6: 4,
+			7: 4,
+			8: 5,
+			9: 5,
+			10: 0,
+			11: 0,
+			12: 1,
 		}, 10)
 }
 
@@ -53,12 +53,12 @@ func TestNewFlower(t *testing.T) {
 		t.Errorf("Expected %q, got %q\n",content[10], hf.State())
 	}
 	// stay still
-	hf.Move(0)
+	hf.Move(-1)
 	if hf.State() != content[10] {
 		t.Errorf("Expected %q, got %q\n",content[10], hf.State())
 	}
 	// move to SE hex
-	hf.Move(4)
+	hf.Move(3)
 	if hf.State() != content[8] {
 		t.Errorf("Expected %q, got %q\n", content[8], hf.State())
 	}
@@ -87,8 +87,8 @@ func TestRestrictedMove(t *testing.T) {
 
 func TestBoundsChecking(t *testing.T) {
 	hf := newTestFlower()
-	hf.Move(1)
-	hf.Move(1)
+	hf.Move(0)
+	hf.Move(0)
 	wantHex := 14
 	if wantHex != hf.CurrentHex() {
 		t.Fatalf("want current hex %d, got %d", wantHex, hf.CurrentHex())
@@ -97,7 +97,7 @@ func TestBoundsChecking(t *testing.T) {
 	if !cmp.Equal(wantNbs, hf.Neighbors()) {
 		t.Error(cmp.Diff(wantNbs, hf.Neighbors()))
 	}
-	hf.Move(4)
+	hf.Move(3)
 	wantHex = 17
 	if wantHex != hf.CurrentHex() {
 		t.Errorf("want current hex %d, got %d", wantHex, hf.CurrentHex())
