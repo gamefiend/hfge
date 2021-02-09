@@ -1,10 +1,39 @@
 package hex
 
 import (
+	"github.com/oleiade/reflections"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"log"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
+type HexFlowerContent struct {
+	Start     int    `yaml:"start"`
+	Hexes     struct {
+		Num1  string `yaml:"1"`
+		Num2  string `yaml:"2"`
+		Num3  string `yaml:"3"`
+		Num4  string `yaml:"4"`
+		Num5  string `yaml:"5"`
+		Num6  string `yaml:"6"`
+		Num7  string `yaml:"7"`
+		Num8  string `yaml:"8"`
+		Num9  string `yaml:"9"`
+		Num10 string `yaml:"10"`
+		Num11 string `yaml:"11"`
+		Num12 string `yaml:"12"`
+		Num13 string `yaml:"13"`
+		Num14 string `yaml:"14"`
+		Num15 string `yaml:"15"`
+		Num16 string `yaml:"16"`
+		Num17 string `yaml:"17"`
+		Num18 string `yaml:"18"`
+		Num19 string `yaml:"19"`
+	} `yaml:"hexes"`
+}
 var neighbors = map[int][]int{
 	1: {2,5,3,0,0,0},
 	2: {4,7,5,1,0,0},
@@ -27,6 +56,20 @@ var neighbors = map[int][]int{
 	19: {0,0,0,18,15,17},
 }
 
+var NavHex = map[int]int{
+	2: 2,
+	3: 2,
+	4: 3,
+	5: 3,
+	6: 4,
+	7: 4,
+	8: 5,
+	9: 5,
+	10: 0,
+	11: 0,
+	12: 1,
+}
+
 type Flower struct {
 	currentNode int
 	content map[int]string
@@ -43,6 +86,31 @@ func NewFlower(content map[int]string, nh map[int]int, start int) *Flower{
 	}
 }
 
+func LoadContent(filename string) (map[int]string, int){
+	var hfc HexFlowerContent
+	yamlFile, err := ioutil.ReadFile(filename)
+	if err!=nil {
+		log.Fatalf("can't open file: %v", err)
+	}
+	err = yaml.Unmarshal(yamlFile, &hfc)
+	if err!= nil {
+		log.Fatalf("can't parse yaml file: %v", err)
+	}
+
+	// remove the Num that we used to import and convert to a map[int]string
+	content := make(map[int]string, 19)
+	for i := 1; i < 20; i++ {
+		numStr := "Num" + strconv.Itoa(i)
+		value, err := reflections.GetField(hfc.Hexes, numStr)
+		if err != nil {
+			log.Fatalf("cannot translate yaml to content: %v",err)
+		}
+		s := value.(string)
+		content[i] = s
+	}
+	return content, hfc.Start
+
+}
 // Move goes in a hex in a direction from 0(NW) to 5(SW).
 // 0 = stand still
 func (f *Flower) Move(direction int) {
@@ -83,3 +151,4 @@ func (f Flower) Neighbors() []int {
 	}
 	return result
 }
+

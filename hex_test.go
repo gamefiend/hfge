@@ -76,9 +76,9 @@ func TestMoveRandomly(t *testing.T) {
 
 func TestRestrictedMove(t *testing.T) {
 	hf := newTestFlower()
-	hf.Move(1)
-	hf.Move(1)
-	hf.Move(6)
+	hf.Move(0)
+	hf.Move(0)
+	hf.Move(5)
 	wantHex := 9
 	if wantHex != hf.CurrentHex() {
 		t.Errorf("want current hex %d, got %d", wantHex, hf.CurrentHex())
@@ -120,5 +120,15 @@ func TestNeighbors(t *testing.T) {
 	got := hf.Neighbors()
 	if !cmp.Equal(want, got) {
 		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestLoadHexFlower(t *testing.T) {
+	filename := "./testdata/hextest.yaml"
+	content, start := hex.LoadContent(filename)
+	hf := hex.NewFlower(content, hex.NavHex, start)
+	hf.Move(-1)
+	if hf.State() != "special" {
+		t.Errorf("Expected %q, got %q\n",content[10], hf.State())
 	}
 }
