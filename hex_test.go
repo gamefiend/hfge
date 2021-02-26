@@ -125,3 +125,16 @@ func TestLoadHexFlower(t *testing.T) {
 		t.Errorf("Expected %q, got %q\n", content.Hexes[10], hf.State())
 	}
 }
+
+func TestNewFlowerFromFile(t *testing.T) {
+	flower, err := hex.NewFlowerFromFile("testdata/hextest.yaml")
+	if err != nil {
+		t.Fatalf("Can't load file: %v", err)
+	}
+	if flower.CurrentHex() != 10 {
+		t.Errorf("Expected %d, got %d\n", flower.CurrentHex(), 10)
+	}
+	if flower.State() != "special" {
+		t.Errorf("Expected %q, got %q\n", content.Hexes[10], flower.State())
+	}
+}

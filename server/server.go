@@ -3,14 +3,16 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"hex"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
-
-	"github.com/ghodss/yaml"
 )
+
+const ContentDir = "../content"
 
 type Server struct {
 	address string
@@ -25,14 +27,17 @@ func New(address string) *Server {
 }
 
 func (s *Server) Start() error {
-	content, err := os.ReadDir("../content")
+	fmt.Println("entering Start")
+	content, err := os.ReadDir(ContentDir)
 	if err != nil {
 		return err
 	}
 	for _, f := range content {
 		root := strings.Split(f.Name(), ".")
 		endpoint := "/" + root[0]
-		DefaultWebFlowers[endpoint], err = hex.NewFlowerFromFile(f.Name())
+		path := filepath.Join(ContentDir, f.Name())
+		fmt.Println("filename", path)
+		DefaultWebFlowers[endpoint], err = hex.NewFlowerFromFile(path)
 		if err != nil {
 			return err
 		}
@@ -44,20 +49,15 @@ func (s *Server) Start() error {
 }
 
 func handleContent(w http.ResponseWriter, r *http.Request){
-	content := "../content" + r.URL.RequestURI() + ".yaml"
-	yamlContent, err := os.ReadFile(content)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-	jsonContent, err := yaml.YAMLToJSON(yamlContent)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-	jsonOutput, err := prettyJSON(jsonContent)
-	if err != nil {
-		log.Print(err)
-	}
-	w.Write(jsonOutput)
+	flower := DefaultWebFlowers[r.URL.RequestURI()]
+	fmt.Println("Current hex", flower.CurrentHex())
+	currentHex := flower.CurrentHex()
+	contents := flower.State()
+	jsonOutput := `{
+  "current_hex": %d,
+  "content": %q
+}`
+	fmt.Fprintf(w, jsonOutput, currentHex, contents)
 }
 
 func (s *Server) Stop(){

@@ -11,16 +11,25 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestGetContent(t *testing.T) {
+func TestMove(t *testing.T) {
 	ns := server.New(":8088")
 	ns.Start()
 	defer ns.Stop()
-	tcs := []string{
-		"terrain",
-		"weather",
+	tcs := []struct {
+		name string
+		URI  string
+	}{
+		{
+			name: "terrain_start",
+			URI:  "/terrain",
+		},
+		{
+			name: "terrain_move10",
+			URI:  "/terrain/10",
+		},
 	}
 	for _, tc := range tcs {
-		response, err := http.Get(fmt.Sprintf("http://localhost:8088/", tc))
+		response, err := http.Get(fmt.Sprintf("http://localhost:8088/%s", tc.URI))
 		if err != nil {
 			t.Fatalf("could not connect: %v", err)
 		}
@@ -32,7 +41,7 @@ func TestGetContent(t *testing.T) {
 		if err != nil {
 			t.Fatalf("problems reading response body : %v", err)
 		}
-		want, err := os.ReadFile(fmt.Sprintf("testdata/%s.json", tc))
+		want, err := os.ReadFile(fmt.Sprintf("testdata/%s.json", tc.name))
 		if err != nil {
 			t.Fatalf("problems reading test file: %v", err)
 		}
