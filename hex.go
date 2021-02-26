@@ -88,13 +88,15 @@ func NewFlowerFromFile(filename string) (*Flower, error) {
 	return NewFlower(hfc), nil
 }
 // Move goes in a hex in a direction from 0(NW) to 5(SW).
-// 0 = stand still
+// -1 = stand still
 func (f *Flower) Move(direction int) {
-	if direction != -1 {
-		choices := f.Neighbors()
-		validDirection := direction % (len(choices))
-		f.currentNode = choices[validDirection]
+	choices := f.Neighbors()
+	//if we stand still, our choice is to stay put.
+	if direction == -1 {
+		choices = []int{f.currentNode}
 	}
+	validDirection := direction % (len(choices))
+	f.currentNode = choices[validDirection]
 }
 
 func (f *Flower) CurrentHex() int {
