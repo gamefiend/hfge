@@ -49,6 +49,7 @@ func (s *Server) Start() error {
 }
 
 func handleContent(w http.ResponseWriter, r *http.Request){
+	// URI: "FLOWER/HEX" ("terrain/10")
 	flower := DefaultWebFlowers[r.URL.RequestURI()]
 	fmt.Println("Current hex", flower.CurrentHex())
 	currentHex := flower.CurrentHex()
