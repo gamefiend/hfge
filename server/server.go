@@ -3,12 +3,13 @@ package server
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/ghodss/yaml"
 	"hex"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+
+	"github.com/ghodss/yaml"
 )
 
 type Server struct {
@@ -23,27 +24,28 @@ func New(address string) *Server {
 	}
 }
 
-func (s *Server) Start(){
-	content, err := ioutil.ReadDir("../content")
+func (s *Server) Start() error {
+	content, err := os.ReadDir("../content")
 	if err != nil {
-		log.Print(err)
+		return err
 	}
 	for _, f := range content {
 		root := strings.Split(f.Name(), ".")
 		endpoint := "/" + root[0]
 		DefaultWebFlowers[endpoint], err = hex.NewFlowerFromFile(f.Name())
 		if err != nil {
-			log.Print(err)
+			return err
 		}
 		log.Print(DefaultWebFlowers[endpoint])
 		http.Handle(endpoint, http.HandlerFunc(handleContent))
 	}
 	go http.ListenAndServe(s.address, nil)
+	return nil
 }
 
 func handleContent(w http.ResponseWriter, r *http.Request){
 	content := "../content" + r.URL.RequestURI() + ".yaml"
-	yamlContent, err := ioutil.ReadFile(content)
+	yamlContent, err := os.ReadFile(content)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}

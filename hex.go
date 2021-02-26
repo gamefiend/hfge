@@ -1,10 +1,11 @@
 package hex
 
 import (
-	"gopkg.in/yaml.v3"
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 type HexFlowerContent struct {
@@ -67,7 +68,7 @@ func NewFlower(content HexFlowerContent) *Flower {
 
 func LoadContent(filename string) (HexFlowerContent, error) {
 	var hfc HexFlowerContent
-	yamlFile, err := ioutil.ReadFile(filename)
+	yamlFile, err := os.ReadFile(filename)
 	if err != nil {
 		return HexFlowerContent{}, err
 	}
@@ -87,6 +88,7 @@ func NewFlowerFromFile(filename string) (*Flower, error) {
 	}
 	return NewFlower(hfc), nil
 }
+
 // Move goes in a hex in a direction from 0(NW) to 5(SW).
 // -1 = stand still
 func (f *Flower) Move(direction int) {
