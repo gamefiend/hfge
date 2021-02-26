@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/mux"
 	"hex"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -27,33 +28,40 @@ func New(address string) *Server {
 }
 
 func (s *Server) Start() error {
-	fmt.Println("entering Start")
 	content, err := os.ReadDir(ContentDir)
 	if err != nil {
 		return err
 	}
+	r := mux.NewRouter()
 	for _, f := range content {
 		root := strings.Split(f.Name(), ".")
 		endpoint := "/" + root[0]
 		path := filepath.Join(ContentDir, f.Name())
-		fmt.Println("filename", path)
 		DefaultWebFlowers[endpoint], err = hex.NewFlowerFromFile(path)
 		if err != nil {
 			return err
 		}
-		log.Print(DefaultWebFlowers[endpoint])
-		http.Handle(endpoint, http.HandlerFunc(handleContent))
+		r.HandleFunc(endpoint, handleContent)
+		r.HandleFunc(fmt.Sprintf("%s/{hex}", endpoint), handleContent)
 	}
-	go http.ListenAndServe(s.address, nil)
+	go http.ListenAndServe(s.address, r)
 	return nil
 }
 
 func handleContent(w http.ResponseWriter, r *http.Request){
 	// URI: "FLOWER/HEX" ("terrain/10")
-	flower := DefaultWebFlowers[r.URL.RequestURI()]
-	fmt.Println("Current hex", flower.CurrentHex())
-	currentHex := flower.CurrentHex()
-	contents := flower.State()
+	var currentHex int
+	var contents string
+	url := mux.Vars(r)
+	endpoint := getRootSubTree(r.URL.RequestURI())
+	flower := DefaultWebFlowers[endpoint]
+	if url["hex"] != "" {
+		ch, _ := strconv.Atoi(url["hex"])
+		flower.SetHex(ch)
+		flower.MoveRandomly()
+	}
+	currentHex = flower.CurrentHex()
+	contents = flower.State()
 	jsonOutput := `{
   "current_hex": %d,
   "content": %q
@@ -63,6 +71,11 @@ func handleContent(w http.ResponseWriter, r *http.Request){
 
 func (s *Server) Stop(){
 
+}
+
+func getRootSubTree(URL string) string {
+	root := strings.Split(URL, "/")
+	return fmt.Sprintf("/%s",root[1])
 }
 
 func prettyJSON(b []byte) ([]byte, error){

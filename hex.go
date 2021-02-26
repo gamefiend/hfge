@@ -105,6 +105,10 @@ func (f *Flower) CurrentHex() int {
 	return f.currentNode
 }
 
+func (f *Flower) SetHex(hex int) {
+	f.currentNode = hex
+}
+
 func (f *Flower) State() string {
 	return f.content[f.currentNode]
 }
