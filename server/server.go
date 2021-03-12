@@ -13,49 +13,66 @@ import (
 	"strings"
 )
 
-const ContentDir = "../content"
 
 type Server struct {
+	contentDir string
 	address string
+	DefaultWebFlowers WebFlowers
+	router *mux.Router
 }
 type WebFlowers map[string]*hex.Flower
-var DefaultWebFlowers = WebFlowers{}
 
-func New(address string) *Server {
-	return &Server {
-		address: address,
+func New(address, contentDir string) (*Server, error) {
+	DefaultWebFlowers := WebFlowers{}
+	content, err := os.ReadDir(contentDir)
+	if err != nil {
+		return nil, err
 	}
+
+	for _, f := range content {
+		root := strings.Split(f.Name(), ".")
+		endpoint := root[0]
+		path := filepath.Join(contentDir, f.Name())
+		DefaultWebFlowers[endpoint], err = hex.NewFlowerFromFile(path)
+		if err != nil {
+			return nil, err
+		}
+		//r.HandleFunc(endpoint, handleContent)
+		//r.HandleFunc(fmt.Sprintf("%s/{hex}", endpoint), handleContent)
+	}
+	s := Server {
+		address: address,
+		contentDir: contentDir,
+		DefaultWebFlowers: DefaultWebFlowers,
+	}
+
+	s.router = mux.NewRouter()
+	s.router.HandleFunc("/{content}/{hex}", s.handleContent)
+
+	return &s, nil
 }
 
 func (s *Server) Start() error {
-	content, err := os.ReadDir(ContentDir)
-	if err != nil {
-		return err
-	}
-	r := mux.NewRouter()
-	for _, f := range content {
-		root := strings.Split(f.Name(), ".")
-		endpoint := "/" + root[0]
-		path := filepath.Join(ContentDir, f.Name())
-		DefaultWebFlowers[endpoint], err = hex.NewFlowerFromFile(path)
-		if err != nil {
-			return err
-		}
-		r.HandleFunc(endpoint, handleContent)
-		r.HandleFunc(fmt.Sprintf("%s/{hex}", endpoint), handleContent)
-	}
-	go http.ListenAndServe(s.address, r)
-	return nil
+	return http.ListenAndServe(s.address, s.router)
 }
 
-func handleContent(w http.ResponseWriter, r *http.Request){
+func (s *Server) handleContent(w http.ResponseWriter, r *http.Request){
 	// URI: "FLOWER/HEX" ("terrain/10")
+
 	var currentHex int
 	var contents string
 	url := mux.Vars(r)
-	endpoint := getRootSubTree(r.URL.RequestURI())
-	flower := DefaultWebFlowers[endpoint]
-	if url["hex"] != "" {
+
+	content := url["content"]
+
+	flower := s.DefaultWebFlowers[content]
+
+	// if the flower is blank for some reason or doesn't exist, return a 404 instead of panicking
+	if flower == nil {
+		http.Error(w, fmt.Sprintf("No value assigned for %s", content), http.StatusNotFound)
+		return
+	}
+	if url["hex"] != ""{
 		ch, _ := strconv.Atoi(url["hex"])
 		flower.SetHex(ch)
 		flower.MoveRandomly()

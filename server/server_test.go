@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 )
 
 
@@ -14,11 +15,36 @@ type FlowerResponse struct {
 	CurrentHex int `json:"current_hex"`
 	Content string `json:"content"`
 }
+func TestBlankFlower(t *testing.T) {
+	// this is the wrong place to get data from, so the webflower will be blank
+	ns, err := server.New(":8087", "../testdata")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		t.Fatal(ns.Start())
+	}()
+	time.Sleep(1 * time.Second)
 
+	response, err := http.Get("http://localhost:8087/terrain/1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusNotFound {
+		t.Errorf("expected %d, got error code %d", http.StatusNotFound, response.StatusCode)
+	}
+
+}
 func TestMove(t *testing.T) {
 	var fr FlowerResponse
-	ns := server.New(":8088")
-	ns.Start()
+	ns, err := server.New(":8088", "../content")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		t.Fatal(ns.Start())
+	}()
+	time.Sleep(1 * time.Second)
 	defer ns.Stop()
 	tcs := []struct {
 		name string
