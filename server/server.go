@@ -2,15 +2,15 @@ package server
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
 	"hex"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-)
 
+	"github.com/gorilla/mux"
+)
 
 type Server struct {
 	contentDir string
@@ -18,33 +18,52 @@ type Server struct {
 	DefaultWebFlowers WebFlowers
 	router *mux.Router
 }
+
 type WebFlowers map[string]*hex.Flower
 
-func New(address, contentDir string) (*Server, error) {
-	DefaultWebFlowers := WebFlowers{}
-	content, err := os.ReadDir(contentDir)
-	if err != nil {
-		return nil, err
-	}
 
-	for _, f := range content {
-		root := strings.Split(f.Name(), ".")
-		endpoint := root[0]
-		path := filepath.Join(contentDir, f.Name())
-		DefaultWebFlowers[endpoint], err = hex.NewFlowerFromFile(path)
+
+type Option func(*Server) error
+
+func WithContentDir(d string) Option {
+	return func(s *Server) error {
+		content, err := os.ReadDir(d)
+		if err != nil {
+			return err
+		}
+
+		for _, f := range content {
+			root := strings.Split(f.Name(), ".")
+			endpoint := root[0]
+			path := filepath.Join(d, f.Name())
+			s.DefaultWebFlowers[endpoint], err = hex.NewFlowerFromFile(path)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+func WithAddress(address string) Option {
+	return func(s *Server) error {
+		s.address = address
+		return nil
+	}
+}
+
+func New(opts ...Option) (*Server, error) {
+	s := Server {
+		DefaultWebFlowers: WebFlowers{},
+	}
+	for _, opt := range opts {
+		err := opt(&s)
 		if err != nil {
 			return nil, err
 		}
 	}
-	s := Server {
-		address: address,
-		contentDir: contentDir,
-		DefaultWebFlowers: DefaultWebFlowers,
-	}
-
 	s.router = mux.NewRouter()
 	s.router.HandleFunc("/{content}/{hex}", s.handleContent)
-
 	return &s, nil
 }
 
