@@ -1,8 +1,6 @@
 package server
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"hex"
@@ -37,8 +35,6 @@ func New(address, contentDir string) (*Server, error) {
 		if err != nil {
 			return nil, err
 		}
-		//r.HandleFunc(endpoint, handleContent)
-		//r.HandleFunc(fmt.Sprintf("%s/{hex}", endpoint), handleContent)
 	}
 	s := Server {
 		address: address,
@@ -90,15 +86,3 @@ func (s *Server) Stop(){
 
 }
 
-func getRootSubTree(URL string) string {
-	root := strings.Split(URL, "/")
-	return fmt.Sprintf("/%s",root[1])
-}
-
-func prettyJSON(b []byte) ([]byte, error){
-	var out bytes.Buffer
-	//get proper formatting so we return something readable
-	err := json.Indent(&out, b, "", "  ")
-	// append a newline
-	return append(out.Bytes(), "\n"...), err
-}

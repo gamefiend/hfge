@@ -15,6 +15,16 @@ type FlowerResponse struct {
 	CurrentHex int `json:"current_hex"`
 	Content string `json:"content"`
 }
+
+func TestServerFailsToInitializeWithWrongFilePath(t *testing.T){
+	_, err := server.New(":8083", "./randomjunk")
+	if err == nil {
+		t.Errorf("Server should return error when given erroneous filepath")
+	}
+
+}
+
+
 func TestBlankFlower(t *testing.T) {
 	// this is the wrong place to get data from, so the webflower will be blank
 	ns, err := server.New(":8087", "../testdata")
@@ -35,6 +45,7 @@ func TestBlankFlower(t *testing.T) {
 	}
 
 }
+
 func TestMove(t *testing.T) {
 	var fr FlowerResponse
 	ns, err := server.New(":8088", "../content")
