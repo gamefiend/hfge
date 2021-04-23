@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"bytes"
+	"fmt"
 	"hex/client"
 	"net/http"
 	"net/http/httptest"
@@ -28,13 +29,14 @@ func TestNewReturnsClientForValidServer(t *testing.T) {
 
 func TestListCallsListEndpoint(t *testing.T) {
 	var called bool
-	ts := httptest.NewTLSServer(http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
-		if r.URL.RawPath != "/list" {
-			t.Errorf("want URL /list, but got %q", r.URL.RawPath)
+		if r.URL.Path != "/ok" {
+			t.Errorf("want URL /ok, but got %q", r.URL.Path)
 		}
 	}))
 	c, err := client.New(ts.URL)
+	fmt.Println(c.ServerAddress)
 	if err != nil {
 		t.Fatal(err)
 	}
