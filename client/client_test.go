@@ -1,8 +1,8 @@
 package client_test
 
 import (
-	"bytes"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"hex/client"
 	"net/http"
 	"net/http/httptest"
@@ -29,23 +29,58 @@ func TestNewReturnsClientForValidServer(t *testing.T) {
 
 func TestListCallsListEndpoint(t *testing.T) {
 	var called bool
+	want := "terrain\nweather\n"
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
-		if r.URL.Path != "/ok" {
-			t.Errorf("want URL /ok, but got %q", r.URL.Path)
+		if r.URL.Path != "/list" {
+			t.Errorf("want URL /list, but got %q", r.URL.Path)
 		}
+		fmt.Fprint(w, want)
 	}))
 	c, err := client.New(ts.URL)
-	fmt.Println(c.ServerAddress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := c.List()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !called {
 		t.Fatal("server not called")
 	}
-	output := bytes.Buffer{}
-	err = c.List(&output)
-	if err != nil {
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestClientStart(t *testing.T) {
+	var called bool
+	wantHex := 10
+	wantContent := "special"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		if r.URL.Path != "/terrain/" {
+			t.Errorf("want URL /terrain/, but got %q", r.URL.Path)
+		}
+		fmt.Fprint(w, `{
+"current_hex": 10,
+"content": "special"
+}`)
+	}))
+	c, err := client.New(ts.URL)
+	if err != nil{
 		t.Fatal(err)
 	}
+	result, err := c.Start("terrain")
+	if !called {
+		t.Fatal("server not called")
+	}
+	if !cmp.Equal(wantHex, result.Hex) {
+		t.Error(cmp.Diff(wantHex, result.Hex))
+	}
+	if !cmp.Equal(wantContent, result.Content){
+		t.Error(cmp.Diff(wantContent, result.Content))
+	}
+
+
 }

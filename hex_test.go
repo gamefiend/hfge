@@ -138,3 +138,14 @@ func TestNewFlowerFromFile(t *testing.T) {
 		t.Errorf("Expected %q, got %q\n", content.Hexes[10], flower.State())
 	}
 }
+
+func TestListContents(t *testing.T){
+	got, err := hex.GetContentsList("testdata/content")
+	want := "terrain\nweather\n"
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmp.Equal(want, got){
+		t.Error(cmp.Diff(want, got))
+	}
+}

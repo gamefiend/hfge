@@ -3,6 +3,7 @@ package hex
 import (
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -10,7 +11,7 @@ import (
 
 type HexFlowerContent struct {
 	Start int            `yaml:"start"`
-	Hexes map[int]string `yaml:hexes"`
+	Hexes map[int]string `yaml:"hexes"`
 }
 
 var neighbors = map[int][]int{
@@ -55,11 +56,13 @@ type Flower struct {
 	content     map[int]string
 	NavHex      map[int]int
 	Random      *rand.Rand
+	Start 		int
 }
 
 func NewFlower(content HexFlowerContent) *Flower {
 	return &Flower{
 		currentNode: content.Start,
+		Start:		 content.Start,
 		content:     content.Hexes,
 		NavHex:      DefaultNavHex,
 		Random:      rand.New(rand.NewSource(time.Now().Unix())),
@@ -134,4 +137,22 @@ func (f Flower) Neighbors() []int {
 		}
 	}
 	return result
+}
+
+func GetContentsList(content string)(string, error){
+	list, err := os.ReadDir(content)
+	if err != nil {
+		return "", err
+	}
+	var output strings.Builder
+	for _, file := range list {
+
+		output.WriteString(trimExtension(file.Name(), ".yaml"))
+		output.WriteRune('\n')
+	}
+	return output.String(), nil
+}
+
+func trimExtension(file, suffix string) string {
+	return strings.TrimSuffix(file, suffix)
 }

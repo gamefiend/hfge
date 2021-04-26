@@ -13,15 +13,13 @@ import (
 )
 
 type Server struct {
-	contentDir string
-	address string
+	contentDir        string
+	address           string
 	DefaultWebFlowers WebFlowers
-	router *mux.Router
+	router            *mux.Router
 }
 
 type WebFlowers map[string]*hex.Flower
-
-
 
 type Option func(*Server) error
 
@@ -41,6 +39,7 @@ func WithContentDir(d string) Option {
 				return err
 			}
 		}
+		s.contentDir = d
 		return nil
 	}
 }
@@ -53,7 +52,7 @@ func WithAddress(address string) Option {
 }
 
 func New(opts ...Option) (*Server, error) {
-	s := Server {
+	s := Server{
 		DefaultWebFlowers: WebFlowers{},
 	}
 	for _, opt := range opts {
@@ -63,7 +62,9 @@ func New(opts ...Option) (*Server, error) {
 		}
 	}
 	s.router = mux.NewRouter()
+	s.router.HandleFunc("/{content}/", s.handleContent)
 	s.router.HandleFunc("/{content}/{hex}", s.handleContent)
+	s.router.HandleFunc("/list", s.handleList)
 	return &s, nil
 }
 
@@ -71,7 +72,7 @@ func (s *Server) Start() error {
 	return http.ListenAndServe(s.address, s.router)
 }
 
-func (s *Server) handleContent(w http.ResponseWriter, r *http.Request){
+func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	// URI: "FLOWER/HEX" ("terrain/10")
 
 	var currentHex int
@@ -87,11 +88,16 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request){
 		http.Error(w, fmt.Sprintf("No value assigned for %s", content), http.StatusNotFound)
 		return
 	}
-	if url["hex"] != ""{
+	switch url["hex"] {
+	case "":
+		flower.SetHex(flower.Start)
+		flower.MoveRandomly()
+	default:
 		ch, _ := strconv.Atoi(url["hex"])
 		flower.SetHex(ch)
 		flower.MoveRandomly()
 	}
+
 	currentHex = flower.CurrentHex()
 	contents = flower.State()
 	jsonOutput := `{
@@ -101,7 +107,13 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request){
 	fmt.Fprintf(w, jsonOutput, currentHex, contents)
 }
 
-func (s *Server) Stop(){
+func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
+	output, err := hex.GetContentsList(s.contentDir)
+	if err != nil {
+		http.Error(w, "Unable to access content list" , http.StatusInternalServerError)
+	}
+	fmt.Fprintf(w, output)
+}
+func (s *Server) Stop() {
 
 }
-
