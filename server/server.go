@@ -1,65 +1,103 @@
 package server
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
 	"hex"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
-const ContentDir = "../content"
-
 type Server struct {
-	address string
+	contentDir        string
+	address           string
+	DefaultWebFlowers WebFlowers
+	router            *mux.Router
 }
+
 type WebFlowers map[string]*hex.Flower
-var DefaultWebFlowers = WebFlowers{}
 
-func New(address string) *Server {
-	return &Server {
-		address: address,
-	}
-}
+type Option func(*Server) error
 
-func (s *Server) Start() error {
-	content, err := os.ReadDir(ContentDir)
-	if err != nil {
-		return err
-	}
-	r := mux.NewRouter()
-	for _, f := range content {
-		root := strings.Split(f.Name(), ".")
-		endpoint := "/" + root[0]
-		path := filepath.Join(ContentDir, f.Name())
-		DefaultWebFlowers[endpoint], err = hex.NewFlowerFromFile(path)
+func WithContentDir(d string) Option {
+	return func(s *Server) error {
+		content, err := os.ReadDir(d)
 		if err != nil {
 			return err
 		}
-		r.HandleFunc(endpoint, handleContent)
-		r.HandleFunc(fmt.Sprintf("%s/{hex}", endpoint), handleContent)
+
+		for _, f := range content {
+			root := strings.Split(f.Name(), ".")
+			endpoint := root[0]
+			path := filepath.Join(d, f.Name())
+			s.DefaultWebFlowers[endpoint], err = hex.NewFlowerFromFile(path)
+			if err != nil {
+				return err
+			}
+		}
+		s.contentDir = d
+		return nil
 	}
-	go http.ListenAndServe(s.address, r)
-	return nil
 }
 
-func handleContent(w http.ResponseWriter, r *http.Request){
+func WithAddress(address string) Option {
+	return func(s *Server) error {
+		s.address = address
+		return nil
+	}
+}
+
+func New(opts ...Option) (*Server, error) {
+	s := Server{
+		DefaultWebFlowers: WebFlowers{},
+	}
+	for _, opt := range opts {
+		err := opt(&s)
+		if err != nil {
+			return nil, err
+		}
+	}
+	s.router = mux.NewRouter()
+	s.router.HandleFunc("/{content}/", s.handleContent)
+	s.router.HandleFunc("/{content}/{hex}", s.handleContent)
+	s.router.HandleFunc("/list", s.handleList)
+	return &s, nil
+}
+
+func (s *Server) Start() error {
+	return http.ListenAndServe(s.address, s.router)
+}
+
+func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	// URI: "FLOWER/HEX" ("terrain/10")
+
 	var currentHex int
 	var contents string
 	url := mux.Vars(r)
-	endpoint := getRootSubTree(r.URL.RequestURI())
-	flower := DefaultWebFlowers[endpoint]
-	if url["hex"] != "" {
+
+	content := url["content"]
+
+	flower := s.DefaultWebFlowers[content]
+
+	// if the flower is blank for some reason or doesn't exist, return a 404 instead of panicking
+	if flower == nil {
+		http.Error(w, fmt.Sprintf("No value assigned for %s", content), http.StatusNotFound)
+		return
+	}
+	switch url["hex"] {
+	case "":
+		flower.SetHex(flower.Start)
+		flower.MoveRandomly()
+	default:
 		ch, _ := strconv.Atoi(url["hex"])
 		flower.SetHex(ch)
 		flower.MoveRandomly()
 	}
+
 	currentHex = flower.CurrentHex()
 	contents = flower.State()
 	jsonOutput := `{
@@ -69,19 +107,13 @@ func handleContent(w http.ResponseWriter, r *http.Request){
 	fmt.Fprintf(w, jsonOutput, currentHex, contents)
 }
 
-func (s *Server) Stop(){
-
+func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
+	output, err := hex.GetContentsList(s.contentDir)
+	if err != nil {
+		http.Error(w, "Unable to access content list" , http.StatusInternalServerError)
+	}
+	fmt.Fprintf(w, output)
 }
+func (s *Server) Stop() {
 
-func getRootSubTree(URL string) string {
-	root := strings.Split(URL, "/")
-	return fmt.Sprintf("/%s",root[1])
-}
-
-func prettyJSON(b []byte) ([]byte, error){
-	var out bytes.Buffer
-	//get proper formatting so we return something readable
-	err := json.Indent(&out, b, "", "  ")
-	// append a newline
-	return append(out.Bytes(), "\n"...), err
 }
